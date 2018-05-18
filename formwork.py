@@ -14,7 +14,7 @@ import logging
 # this allows GDAL to throw Python Exceptions
 gdal.UseExceptions()
 
-
+logging.basicConfig(filename = "loggingFile.log", level = loggig.DEBUG)
 
 def input_arguments():
     parser = argparse.ArgumentParser()
@@ -26,6 +26,7 @@ def input_arguments():
     parser.add_argument("--min_value", type = int, help = "minimum value in the range")
     parser.add_argument("--k", type = int, help = "number of classes")
     parser.add_argument("--flag", help = "number of classes", action = "store_true")
+    logging.info("command line inputs recognised")
     return(parser.parse_args()) 
 
 def read_raster(args):
@@ -33,6 +34,7 @@ def read_raster(args):
     src_band = src_ds.GetRasterBand(1).ReadAsArray().astype(np.float).flatten()
     no_data_val = src_ds.GetRasterBand(1).GetNoDataValue()
     no_data_index = np.where(src_band==no_data_val)
+    logging.info("elevation values from raster stored in array")
     return(np.delete(src_band,no_data_index)) 
 
 def no_of_classes(args, src_band_array):
@@ -60,15 +62,21 @@ def no_of_classes(args, src_band_array):
             elevation.append(value)
             value = value + ((args.max_value - args.min_value)/(data - 1))
         
-    else:
+    elif(args.k):
         kmeans = KMeans(n_clusters = args.k).fit(src_band_array.reshape(-1,1))
         cluster_center = np.array([x[0] for x in kmeans.cluster_centers_])
         elevation.extend(sorted(cluster_center.tolist()))
         elevation.insert(0,src_band_array.min())
         elevation.append(src_band_array.max())
+    logging.info("elevation values made into classes")
+
+    else:
+        logging.debug("required arguments missing")
+        logging.debug("--max_value and --min_value for time series DEM, --range for error range in formwork DEM, --k for value of k in single time case")
     return(elevation)
 
 def create_color_file(args, elevation):
+    logging.debug(elevation)
     arr = []
     new_arr=[]
     with open(args.color_file) as csvfile:
@@ -89,7 +97,9 @@ def create_color_file(args, elevation):
         writer = csv.writer(csvfile, delimiter =' ')
         for ar in new_arr:
             writer.writerow(ar)
-    return(args.output_color_file)
+    logging.debug(new_arr)
+    logging.info("output color text file created")
+    #return(args.output_color_file)
 
 args = input_arguments()
 src_band_array = read_raster(args)
@@ -97,7 +107,7 @@ elevation = no_of_classes(args, src_band_array)
 output_color_file = create_color_file(args, elevation) 
 
 if args.flag:
-    create_colorized_dem.createColorAndHSDems(args.input_DEM_file, output_color_file)
+    create_colorized_dem.createColorAndHSDems(args.input_DEM_file,args.output_color_file)
     # subprocess.call(["gdaldem", "color-relief", args.input_DEM_file , output_color_file, args.input_DEM_file.replace(".tif", "_colorised_output.tif")])        
 
 
