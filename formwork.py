@@ -8,8 +8,13 @@ import csv
 import json
 import subprocess
 import statistics
+import combine_hillshaded_colorized
+import create_colorized_dem
+import logging
 # this allows GDAL to throw Python Exceptions
 gdal.UseExceptions()
+
+
 
 def input_arguments():
     parser = argparse.ArgumentParser()
@@ -41,10 +46,11 @@ def no_of_classes(args, src_band_array):
         center_index = kmeans.predict(src_band_array.reshape(-1,1))
         floor = cluster_center[statistics.mode(center_index)]
         value = floor - args.range
-        for i in range(data):
+        elevation.append(value-0.01)
+        for i in range(data-1):
             elevation.append(value)
-            value = value + (2*args.range)/data
-
+            value = value + (2*args.range)/(data - 2)
+        
     elif (args.max_value and args.min_value):
         value = args.min_value
         with open(args.color_file) as csvfile:
@@ -58,12 +64,11 @@ def no_of_classes(args, src_band_array):
         kmeans = KMeans(n_clusters = args.k).fit(src_band_array.reshape(-1,1))
         cluster_center = np.array([x[0] for x in kmeans.cluster_centers_])
         elevation.extend(sorted(cluster_center.tolist()))
+        elevation.insert(0,src_band_array.min())
+        elevation.append(src_band_array.max())
     return(elevation)
 
 def create_color_file(args, elevation):
-
-    print(elevation)
-    
     arr = []
     new_arr=[]
     with open(args.color_file) as csvfile:
@@ -80,8 +85,6 @@ def create_color_file(args, elevation):
 
     new_arr.append(['nv',000,000,000])
 
-    print(new_arr)
-
     with open(args.output_color_file,'w') as csvfile:
         writer = csv.writer(csvfile, delimiter =' ')
         for ar in new_arr:
@@ -94,6 +97,7 @@ elevation = no_of_classes(args, src_band_array)
 output_color_file = create_color_file(args, elevation) 
 
 if args.flag:
-    subprocess.call(["gdaldem", "color-relief", args.input_DEM_file , output_color_file, args.input_DEM_file.replace(".tif", "_colorised_output.tif")])        
+    create_colorized_dem.createColorAndHSDems(args.input_DEM_file, output_color_file)
+    # subprocess.call(["gdaldem", "color-relief", args.input_DEM_file , output_color_file, args.input_DEM_file.replace(".tif", "_colorised_output.tif")])        
 
 
