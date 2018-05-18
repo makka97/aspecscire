@@ -14,7 +14,7 @@ import logging
 # this allows GDAL to throw Python Exceptions
 gdal.UseExceptions()
 
-logging.basicConfig(filename = "loggingFile.log", level = loggig.DEBUG)
+logging.basicConfig(filename = "loggingFile.log", level = logging.DEBUG)
 
 def input_arguments():
     parser = argparse.ArgumentParser()
@@ -68,11 +68,11 @@ def no_of_classes(args, src_band_array):
         elevation.extend(sorted(cluster_center.tolist()))
         elevation.insert(0,src_band_array.min())
         elevation.append(src_band_array.max())
-    logging.info("elevation values made into classes")
-
+        
     else:
         logging.debug("required arguments missing")
         logging.debug("--max_value and --min_value for time series DEM, --range for error range in formwork DEM, --k for value of k in single time case")
+    logging.info("elevation values made into classes")
     return(elevation)
 
 def create_color_file(args, elevation):
@@ -99,7 +99,7 @@ def create_color_file(args, elevation):
             writer.writerow(ar)
     logging.debug(new_arr)
     logging.info("output color text file created")
-    #return(args.output_color_file)
+    return(args.output_color_file)
 
 args = input_arguments()
 src_band_array = read_raster(args)
@@ -107,7 +107,7 @@ elevation = no_of_classes(args, src_band_array)
 output_color_file = create_color_file(args, elevation) 
 
 if args.flag:
-    create_colorized_dem.createColorAndHSDems(args.input_DEM_file,args.output_color_file)
+    create_colorized_dem.createColorAndHSDems(args.input_DEM_file,output_color_file)
     # subprocess.call(["gdaldem", "color-relief", args.input_DEM_file , output_color_file, args.input_DEM_file.replace(".tif", "_colorised_output.tif")])        
 
 
